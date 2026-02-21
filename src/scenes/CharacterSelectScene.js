@@ -85,6 +85,15 @@ const BOTTOM_COLORS = {
 };
 
 // ---------------------------------------------------------------------------
+// Layout constants
+// ---------------------------------------------------------------------------
+const MOBILE_BREAKPOINT = 700;   // px – below this width use single-column layout
+const MOBILE_ROW_START_Y = 80;   // px – y position of first trait row on mobile
+const MOBILE_ROW_HEIGHT = 46;    // px – height per trait row on mobile
+const MOBILE_CHAR_HEIGHT = 310;  // px – approximate character drawing height
+const MOBILE_BTN_MARGIN = 60;    // px – bottom margin above the Start button
+
+// ---------------------------------------------------------------------------
 // Scene
 // ---------------------------------------------------------------------------
 export class CharacterSelectScene extends Phaser.Scene {
@@ -111,11 +120,13 @@ export class CharacterSelectScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
   _buildUI() {
     const W = this.scale.width;
+    const H = this.scale.height;
+    const isMobile = W < MOBILE_BREAKPOINT;
 
     // Title
     this.add
       .text(W / 2, 28, 'Create Your Character', {
-        fontSize: '26px',
+        fontSize: isMobile ? '22px' : '26px',
         fontFamily: 'Arial',
         color: '#ffffff',
         fontStyle: 'bold',
@@ -131,22 +142,38 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // Trait rows – two columns of 4
-    const rowStartY = 100;
-    const rowHeight = 58;
-    const colX = [20, 420]; // left / right column x
+    if (isMobile) {
+      // Mobile: single column of all 8 traits
+      const pad = 8;
+      const rowWidth = W - pad * 2;
 
-    TRAITS.forEach((trait, i) => {
-      const col = i < 4 ? 0 : 1;
-      const row = i % 4;
-      const x = colX[col];
-      const y = rowStartY + row * rowHeight;
+      TRAITS.forEach((trait, i) => {
+        this._buildTraitRow(
+          trait,
+          i,
+          pad,
+          MOBILE_ROW_START_Y + i * MOBILE_ROW_HEIGHT,
+          rowWidth
+        );
+      });
+    } else {
+      // Desktop: two columns of 4
+      const rowStartY = 100;
+      const rowHeight = 58;
+      const colX = [20, 420]; // left / right column x
 
-      this._buildTraitRow(trait, i, x, y);
-    });
+      TRAITS.forEach((trait, i) => {
+        const col = i < 4 ? 0 : 1;
+        const row = i % 4;
+        const x = colX[col];
+        const y = rowStartY + row * rowHeight;
+
+        this._buildTraitRow(trait, i, x, y, 370);
+      });
+    }
 
     // Confirm / Start button
-    const btnY = this.scale.height - 44;
+    const btnY = H - 44;
     const btn = this.add
       .text(W / 2, btnY, '▶  Start Game', {
         fontSize: '20px',
@@ -164,8 +191,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     btn.on('pointerdown', () => this._onStartGame());
   }
 
-  _buildTraitRow(trait, traitIndex, x, y) {
-    const rowWidth = 370;
+  _buildTraitRow(trait, traitIndex, x, y, rowWidth = 370) {
 
     // Trait label
     this.add.text(x + 8, y + 8, trait.label, {
@@ -305,9 +331,17 @@ export class CharacterSelectScene extends Phaser.Scene {
     const bottomColor = BOTTOM_COLORS[bottomOpt];
     const accessoryOpt = TRAITS[7].options[sel.accessory];
 
-    // Character centre – placed in the middle of the canvas
-    const cx = 400;
-    const baseY = 480; // feet level
+    const W = this.scale.width;
+    const H = this.scale.height;
+    const isMobile = W < MOBILE_BREAKPOINT;
+
+    // Character centre – placed responsively
+    const cx = isMobile ? W / 2 : 400;
+    // On mobile, draw character below the trait rows
+    const mobileTrailsBottom = MOBILE_ROW_START_Y + TRAITS.length * MOBILE_ROW_HEIGHT;
+    const baseY = isMobile
+      ? Math.min(H - MOBILE_BTN_MARGIN, mobileTrailsBottom + MOBILE_CHAR_HEIGHT)
+      : 480; // feet level
 
     // --- Shoes ---
     g.fillStyle(0x333333);
