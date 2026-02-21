@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Kid Test Game - Character Creator</title>
     <style>
       * {
@@ -10,13 +10,21 @@
         padding: 0;
         box-sizing: border-box;
       }
+      html,
       body {
+        width: 100%;
+        height: 100%;
         background: #1a1a2e;
+        overflow: hidden;
+      }
+      body {
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
-        overflow: hidden;
+      }
+      #game-container {
+        width: 100%;
+        height: 100%;
       }
       canvas {
         display: block;
