@@ -1,0 +1,16 @@
+{
+  "name": "kid-test-game",
+  "version": "1.0.0",
+  "description": "A kid-friendly character customization game built with Phaser.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.87.0"
+  },
+  "devDependencies": {
+    "vite": "^6.1.0"
+  }
+}
