@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+/* global Phaser */
 
 // ---------------------------------------------------------------------------
 // Character customisation options (8 traits)
@@ -108,11 +108,34 @@ export class CharacterSelectScene extends Phaser.Scene {
       this._selections[t.key] = 0;
     });
 
+    // Restore selections saved before a resize-restart
+    const saved = this.registry.get('_selections');
+    if (saved) {
+      this._selections = saved;
+      this.registry.remove('_selections');
+    }
+
     this._characterGraphics = this.add.graphics();
     this._accessoryGraphics = this.add.graphics();
 
     this._buildUI();
     this._drawCharacter();
+
+    // Rebuild UI when viewport changes (mobile browser chrome show/hide)
+    let resizeTimer = null;
+    const onResize = () => {
+      if (resizeTimer !== null) {
+        resizeTimer.remove(false);
+        resizeTimer = null;
+      }
+      resizeTimer = this.time.delayedCall(250, () => {
+        resizeTimer = null;
+        this.registry.set('_selections', { ...this._selections });
+        this.scene.restart();
+      });
+    };
+    this.scale.on('resize', onResize, this);
+    this.events.once('shutdown', () => this.scale.off('resize', onResize, this));
   }
 
   // -------------------------------------------------------------------------

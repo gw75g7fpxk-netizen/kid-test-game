@@ -1,8 +1,8 @@
-import Phaser from 'phaser';
+/* global Phaser */
 import { CharacterSelectScene } from './scenes/CharacterSelectScene.js';
 
 const config = {
-  type: Phaser.AUTO,
+  type: Phaser.CANVAS,
   backgroundColor: '#1a1a2e',
   scene: [CharacterSelectScene],
   parent: 'game-container',
