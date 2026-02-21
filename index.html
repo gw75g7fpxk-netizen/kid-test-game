@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>Kid Test Game - Character Creator</title>
     <style>
       * {
@@ -16,6 +19,11 @@
         height: 100%;
         background: #1a1a2e;
         overflow: hidden;
+        position: fixed;
+        touch-action: none;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
       }
       #game-container {
         position: fixed;
@@ -26,6 +34,8 @@
       }
       canvas {
         display: block;
+        width: 100vw !important;
+        height: 100vh !important;
       }
     </style>
   </head>
