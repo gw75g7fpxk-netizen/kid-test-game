@@ -7,7 +7,7 @@ const TRAITS = [
   {
     key: 'hairStyle',
     label: 'Hair Style',
-    options: ['Short', 'Long', 'Curly', 'Spiky'],
+    options: ['Short', 'Long', 'Curly Short', 'Curly Long', 'Spiky'],
   },
   {
     key: 'hairColor',
@@ -529,11 +529,28 @@ export class CharacterSelectScene extends Phaser.Scene {
         g.fillRect(cx + 28, baseY - 290, 14, 90); // right strand
         break;
 
-      case 'Curly':
-        // Larger poofy top
+      case 'Curly Short':
+        // Short curly – poofy clusters close to the head
         g.fillCircle(cx, baseY - 310, 44);
         g.fillCircle(cx - 30, baseY - 295, 26);
         g.fillCircle(cx + 30, baseY - 295, 26);
+        break;
+
+      case 'Curly Long':
+        // Long curly – poofy top plus curly clusters cascading down the sides
+        g.fillCircle(cx, baseY - 310, 44);
+        g.fillCircle(cx - 30, baseY - 295, 26);
+        g.fillCircle(cx + 30, baseY - 295, 26);
+        // Left side cascading curls
+        g.fillCircle(cx - 44, baseY - 270, 18);
+        g.fillCircle(cx - 46, baseY - 245, 16);
+        g.fillCircle(cx - 44, baseY - 222, 15);
+        g.fillCircle(cx - 42, baseY - 200, 14);
+        // Right side cascading curls
+        g.fillCircle(cx + 44, baseY - 270, 18);
+        g.fillCircle(cx + 46, baseY - 245, 16);
+        g.fillCircle(cx + 44, baseY - 222, 15);
+        g.fillCircle(cx + 42, baseY - 200, 14);
         break;
 
       case 'Spiky':
