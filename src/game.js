@@ -1,10 +1,11 @@
 /* global Phaser */
 import { CharacterSelectScene } from './scenes/CharacterSelectScene.js';
+import { LivingRoomScene } from './scenes/LivingRoomScene.js';
 
 const config = {
   type: Phaser.CANVAS,
   backgroundColor: '#1a1a2e',
-  scene: [CharacterSelectScene],
+  scene: [CharacterSelectScene, LivingRoomScene],
   parent: 'game-container',
   scale: {
     mode: Phaser.Scale.RESIZE,
