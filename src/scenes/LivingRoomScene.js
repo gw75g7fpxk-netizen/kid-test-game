@@ -1,0 +1,526 @@
+/* global Phaser */
+import {
+  TRAITS,
+  HAIR_COLORS,
+  SKIN_TONES,
+  EYE_COLORS,
+  TOP_COLORS,
+  BOTTOM_COLORS,
+} from './CharacterSelectScene.js';
+
+// Offset used to convert the sitting character's head-centre Y back to the
+// "feet-level baseY" coordinate system that _drawHair expects.
+// Derived from CharacterSelectScene: head centre = baseY − 265.
+const HEAD_TO_BASE_OFFSET = 265;
+
+export class LivingRoomScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'LivingRoomScene' });
+  }
+
+  init(data) {
+    this._sel = data || {};
+  }
+
+  create() {
+    const W = this.scale.width;
+    const H = this.scale.height;
+
+    // Layer order: room background → couch back → character → couch front
+    const bgG = this.add.graphics();
+    this._drawRoom(bgG, W, H);
+
+    const charG = this.add.graphics();
+    const accG = this.add.graphics();
+    this._drawSittingCharacter(charG, accG, W, H);
+
+    // Draw couch front face on top so it partially overlaps the character's legs
+    const fgG = this.add.graphics();
+    this._drawCouchFront(fgG, W, H);
+
+    // Scene title
+    this.add
+      .text(W / 2, 26, '🎮  Game Start!', {
+        fontSize: '22px',
+        fontFamily: 'Arial',
+        color: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#3a2800',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5);
+
+    // Back button
+    const btn = this.add
+      .text(W / 2, H - 28, '◀  Back to Character Select', {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: '#ffffff',
+        backgroundColor: '#5a3fa0',
+        padding: { x: 16, y: 8 },
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#7a5fc0' }));
+    btn.on('pointerout', () => btn.setStyle({ backgroundColor: '#5a3fa0' }));
+    btn.on('pointerdown', () => {
+      // Preserve selections so the character creator restores them
+      this.registry.set('_selections', { ...this._sel });
+      this.scene.start('CharacterSelectScene');
+    });
+
+    // Fade the scene in
+    this.cameras.main.setAlpha(0);
+    this.tweens.add({
+      targets: this.cameras.main,
+      alpha: 1,
+      duration: 500,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shared couch geometry (keeps everything in sync)
+  // ---------------------------------------------------------------------------
+  _couchDimensions(W, H) {
+    const floorY = Math.round(H * 0.72);
+    const couchW = Math.min(420, Math.round(W * 0.78));
+    const cx = Math.round(W / 2);
+    const armW = Math.round(couchW * 0.1);
+    const seatH = 36;
+    const backH = 110;
+    const seatY = floorY - seatH - 12; // top of seat cushion
+    return { floorY, couchW, cx, armW, seatH, backH, seatY };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Room background (wall, floor, window, TV, lamp, rug, couch back)
+  // ---------------------------------------------------------------------------
+  _drawRoom(g, W, H) {
+    const { floorY } = this._couchDimensions(W, H);
+
+    // ── Wall ──────────────────────────────────────────────────────────────────
+    g.fillStyle(0xf2e4c8); // warm cream
+    g.fillRect(0, 0, W, floorY);
+
+    // Crown moulding strip at ceiling
+    g.fillStyle(0xe4d4b0);
+    g.fillRect(0, 0, W, 14);
+
+    // Baseboard
+    g.fillStyle(0xd8c8a4);
+    g.fillRect(0, floorY - 16, W, 16);
+
+    // ── Floor ─────────────────────────────────────────────────────────────────
+    g.fillStyle(0xb87a2a); // hardwood
+    g.fillRect(0, floorY, W, H - floorY);
+
+    // Plank lines
+    g.lineStyle(1, 0x9a6618, 0.5);
+    for (let y = floorY + 20; y < H; y += 20) {
+      g.beginPath();
+      g.moveTo(0, y);
+      g.lineTo(W, y);
+      g.strokePath();
+    }
+
+    // ── Window (right side of wall) ───────────────────────────────────────────
+    const winCX = Math.round(W * 0.75);
+    const winW = 130;
+    const winH = 110;
+    const winTop = 60;
+
+    // Curtain rod
+    g.fillStyle(0x8b7355);
+    g.fillRect(winCX - winW / 2 - 32, winTop - 12, winW + 64, 8);
+
+    // Curtains (drawn before frame so frame sits on top)
+    g.fillStyle(0xc05030);
+    // left curtain
+    g.fillTriangle(
+      winCX - winW / 2 - 2, winTop - 4,
+      winCX - winW / 2 - 2, winTop + winH + 8,
+      winCX - winW / 2 - 30, winTop - 4
+    );
+    g.fillTriangle(
+      winCX - winW / 2 - 2,  winTop + winH + 8,
+      winCX - winW / 2 - 30, winTop - 4,
+      winCX - winW / 2 - 30, winTop + winH + 8
+    );
+    // right curtain
+    g.fillTriangle(
+      winCX + winW / 2 + 2, winTop - 4,
+      winCX + winW / 2 + 2, winTop + winH + 8,
+      winCX + winW / 2 + 30, winTop - 4
+    );
+    g.fillTriangle(
+      winCX + winW / 2 + 2,  winTop + winH + 8,
+      winCX + winW / 2 + 30, winTop - 4,
+      winCX + winW / 2 + 30, winTop + winH + 8
+    );
+
+    // Window frame
+    g.fillStyle(0xffffff);
+    g.fillRect(winCX - winW / 2 - 6, winTop - 6, winW + 12, winH + 12);
+
+    // Sky
+    g.fillStyle(0x87ceeb);
+    g.fillRect(winCX - winW / 2, winTop, winW, winH);
+
+    // Clouds
+    g.fillStyle(0xffffff);
+    g.fillEllipse(winCX - 20, winTop + 35, 52, 22);
+    g.fillEllipse(winCX + 30, winTop + 55, 40, 18);
+
+    // Window cross-bars
+    g.fillStyle(0xeeeeee);
+    g.fillRect(winCX - 3, winTop, 6, winH);
+    g.fillRect(winCX - winW / 2, winTop + winH / 2 - 3, winW, 6);
+
+    // ── TV (left side of wall) ─────────────────────────────────────────────────
+    const tvCX = Math.round(W * 0.18);
+    const tvW = 140;
+    const tvH = 88;
+    const tvTop = 85;
+
+    // Stand pole + base
+    g.fillStyle(0x888888);
+    g.fillRect(tvCX - 4, tvTop + tvH + 8, 8, 26);
+    g.fillEllipse(tvCX, tvTop + tvH + 36, 36, 10);
+
+    // TV bezel
+    g.fillStyle(0x1c1c1c);
+    g.fillRect(tvCX - tvW / 2 - 8, tvTop - 8, tvW + 16, tvH + 16);
+
+    // TV screen
+    g.fillStyle(0x0d1b2a);
+    g.fillRect(tvCX - tvW / 2, tvTop, tvW, tvH);
+
+    // Screen slight blue glow (top-left brighter area)
+    g.fillStyle(0x1a3a5c);
+    g.fillRect(tvCX - tvW / 2, tvTop, tvW / 2, tvH / 2);
+
+    // Small reflection glint
+    g.fillStyle(0xffffff);
+    g.fillRect(tvCX - tvW / 2 + 6, tvTop + 6, 18, 10);
+
+    // ── Floor lamp (far right) ─────────────────────────────────────────────────
+    const lampX = Math.round(W * 0.9);
+    const lampBaseY = floorY - 4;
+
+    g.fillStyle(0x777777);
+    g.fillEllipse(lampX, lampBaseY, 32, 12);
+    g.fillRect(lampX - 4, lampBaseY - 155, 8, 155);
+
+    // Lampshade
+    g.fillStyle(0xf0c86a);
+    g.fillTriangle(
+      lampX - 30, lampBaseY - 157,
+      lampX + 30, lampBaseY - 157,
+      lampX,      lampBaseY - 215
+    );
+
+    // Warm glow halo
+    g.fillStyle(0xffee88);
+    g.fillCircle(lampX, lampBaseY - 178, 26);
+    g.setAlpha(0.12);
+    g.fillCircle(lampX, lampBaseY - 130, 65);
+    g.setAlpha(1);
+
+    // ── Decorative rug ────────────────────────────────────────────────────────
+    const rugCX = Math.round(W / 2);
+    const rugY = floorY + Math.round((H - floorY) * 0.35);
+    g.fillStyle(0x7030a0);
+    g.fillEllipse(rugCX, rugY, Math.round(W * 0.65), Math.round((H - floorY) * 0.55));
+    g.fillStyle(0x9040c8);
+    g.fillEllipse(rugCX, rugY, Math.round(W * 0.48), Math.round((H - floorY) * 0.38));
+    g.lineStyle(2, 0xb060e0);
+    g.strokeEllipse(rugCX, rugY, Math.round(W * 0.56), Math.round((H - floorY) * 0.46));
+
+    // ── Couch back half ────────────────────────────────────────────────────────
+    this._drawCouchBack(g, W, H);
+  }
+
+  // ── Couch back (drawn before character) ──────────────────────────────────────
+  _drawCouchBack(g, W, H) {
+    const { couchW, cx, armW, seatH, backH, seatY } = this._couchDimensions(W, H);
+    const couchX = cx - couchW / 2;
+
+    const couchMain  = 0x7b4f1e;
+    const couchDark  = 0x5a380d;
+    const couchLight = 0xa06828;
+    const cushionC   = 0x8b5a20;
+
+    // Back panel
+    g.fillStyle(couchMain);
+    g.fillRect(couchX, seatY - backH, couchW, backH);
+
+    // Back top trim edge
+    g.fillStyle(couchDark);
+    g.fillRect(couchX, seatY - backH, couchW, 10);
+
+    // Back cushion panel dividers (thirds)
+    const third = Math.round(couchW / 3);
+    g.fillStyle(couchDark);
+    g.fillRect(couchX + third - 2,     seatY - backH + 10, 4, backH - 10);
+    g.fillRect(couchX + third * 2 - 2, seatY - backH + 10, 4, backH - 10);
+
+    // Seat cushion surface
+    g.fillStyle(cushionC);
+    g.fillRect(couchX + armW, seatY, couchW - armW * 2, seatH);
+
+    // Seat center divider
+    g.fillStyle(couchDark);
+    g.fillRect(cx - 2, seatY, 4, seatH);
+
+    // Armrests (sides)
+    g.fillStyle(couchMain);
+    g.fillRect(couchX,                  seatY - backH, armW, backH + seatH);
+    g.fillRect(couchX + couchW - armW,  seatY - backH, armW, backH + seatH);
+
+    // Armrest top rounded highlights
+    g.fillStyle(couchLight);
+    g.fillEllipse(couchX + armW / 2,              seatY - backH, armW + 6, 14);
+    g.fillEllipse(couchX + couchW - armW / 2,     seatY - backH, armW + 6, 14);
+  }
+
+  // ── Couch front face (drawn on top of character to show seat edge) ─────────
+  _drawCouchFront(g, W, H) {
+    const { floorY, couchW, cx, armW, seatH, seatY } = this._couchDimensions(W, H);
+    const couchX = cx - couchW / 2;
+
+    const couchDark = 0x5a380d;
+
+    // Front seat face (visible edge below cushion top)
+    g.fillStyle(couchDark);
+    g.fillRect(couchX + armW, seatY + seatH, couchW - armW * 2, 20);
+
+    // Armrest front faces
+    g.fillStyle(0x4a2d0d);
+    g.fillRect(couchX,                 seatY + seatH, armW, 20);
+    g.fillRect(couchX + couchW - armW, seatY + seatH, armW, 20);
+
+    // Short couch legs
+    g.fillStyle(0x3e2408);
+    g.fillRect(couchX + armW + 8,            floorY - 14, 14, 14);
+    g.fillRect(couchX + couchW - armW - 22,  floorY - 14, 14, 14);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sitting character
+  // ---------------------------------------------------------------------------
+  _drawSittingCharacter(g, ag, W, H) {
+    const { seatY, cx } = this._couchDimensions(W, H);
+    const sel = this._sel;
+
+    const hairStyleOpt = TRAITS[0].options[sel.hairStyle ?? 0];
+    const hairColor    = HAIR_COLORS[TRAITS[1].options[sel.hairColor ?? 0]];
+    const skinColor    = SKIN_TONES[TRAITS[2].options[sel.skinTone ?? 0]];
+    const eyeColor     = EYE_COLORS[TRAITS[3].options[sel.eyeColor ?? 0]];
+    const topOpt       = TRAITS[4].options[sel.top ?? 0];
+    const topColor     = TOP_COLORS[TRAITS[5].options[sel.topColor ?? 0]];
+    const bottomOpt    = TRAITS[6].options[sel.bottom ?? 0];
+    const bottomColor  = BOTTOM_COLORS[bottomOpt];
+    const accessoryOpt = TRAITS[7].options[sel.accessory ?? 0];
+
+    // Character's hips rest on top of the seat cushion
+    const hipY    = seatY + 4;
+    const thighW  = 52;
+    const thighH  = 25;
+    const calfW   = 22;
+    const calfH   = 62;
+
+    // ── Sitting legs ───────────────────────────────────────────────────────────
+    g.fillStyle(bottomColor);
+
+    if (bottomOpt === 'Skirt') {
+      // Skirt fans out across the seat
+      g.fillRect(cx - 55, hipY - 25, 110, 30);
+      g.fillTriangle(
+        cx - 55, hipY + 5,
+        cx + 55, hipY + 5,
+        cx - 65, hipY + 52
+      );
+      g.fillTriangle(
+        cx - 55, hipY + 5,
+        cx + 55, hipY + 5,
+        cx + 65, hipY + 52
+      );
+      // Bare lower legs
+      g.fillStyle(skinColor);
+      g.fillRect(cx - 58, hipY + 50, calfW, calfH - 12);
+      g.fillRect(cx + 36, hipY + 50, calfW, calfH - 12);
+      // Shoes
+      g.fillStyle(0x333333);
+      g.fillEllipse(cx - 47, hipY + 102, 30, 12);
+      g.fillEllipse(cx + 47, hipY + 102, 30, 12);
+
+    } else if (bottomOpt === 'Shorts') {
+      // Short thighs visible
+      g.fillRect(cx - thighW - 12, hipY, thighW, thighH);
+      g.fillRect(cx + 12,          hipY, thighW, thighH);
+      // Bare lower legs (skin)
+      g.fillStyle(skinColor);
+      g.fillRect(cx - thighW - 1,  hipY + thighH, calfW, calfH);
+      g.fillRect(cx + thighW - 10, hipY + thighH, calfW, calfH);
+      // Shoes
+      g.fillStyle(0x333333);
+      g.fillEllipse(cx - thighW + 10, hipY + thighH + calfH + 8, 30, 13);
+      g.fillEllipse(cx + thighW + 12, hipY + thighH + calfH + 8, 30, 13);
+
+    } else {
+      // Jeans / Leggings – full leg
+      g.fillRect(cx - thighW - 12, hipY, thighW, thighH);
+      g.fillRect(cx + 12,          hipY, thighW, thighH);
+      // Calves
+      g.fillRect(cx - thighW - 1,  hipY + thighH, calfW, calfH);
+      g.fillRect(cx + thighW - 10, hipY + thighH, calfW, calfH);
+      // Shoes
+      g.fillStyle(0x333333);
+      g.fillEllipse(cx - thighW + 10, hipY + thighH + calfH + 8, 30, 13);
+      g.fillEllipse(cx + thighW + 12, hipY + thighH + calfH + 8, 30, 13);
+    }
+
+    // ── Torso ──────────────────────────────────────────────────────────────────
+    const torsoH   = 80;
+    const torsoTop = hipY - torsoH;
+
+    g.fillStyle(topColor);
+    if (topOpt === 'Dress') {
+      g.fillRect(cx - 28, torsoTop, 56, torsoH + 30);
+    } else {
+      g.fillRect(cx - 28, torsoTop, 56, torsoH);
+    }
+
+    // Hoodie / Jacket details
+    if (topOpt === 'Hoodie') {
+      g.fillStyle(Phaser.Display.Color.ValueToColor(topColor).darken(20).color);
+      g.fillRect(cx - 4, torsoTop, 8, 60);
+    } else if (topOpt === 'Jacket') {
+      g.fillStyle(Phaser.Display.Color.ValueToColor(topColor).darken(30).color);
+      g.fillRect(cx - 28, torsoTop, 10, 80);
+      g.fillRect(cx + 18, torsoTop, 10, 80);
+    }
+
+    // ── Arms (resting at sides / on armrests) ─────────────────────────────────
+    g.fillStyle(topColor);
+    g.fillRect(cx - 52, torsoTop + 5, 22, 58); // left arm
+    g.fillRect(cx + 30, torsoTop + 5, 22, 58); // right arm
+
+    // Hands
+    g.fillStyle(skinColor);
+    g.fillEllipse(cx - 41, torsoTop + 68, 18, 20);
+    g.fillEllipse(cx + 41, torsoTop + 68, 18, 20);
+
+    // ── Neck ──────────────────────────────────────────────────────────────────
+    g.fillStyle(skinColor);
+    g.fillRect(cx - 10, torsoTop - 16, 20, 20);
+
+    // ── Head ──────────────────────────────────────────────────────────────────
+    g.fillStyle(skinColor);
+    const headCY = torsoTop - 56; // head centre Y
+    g.fillEllipse(cx, headCY, 80, 90);
+
+    // Eyes
+    g.fillStyle(0xffffff);
+    g.fillEllipse(cx - 18, headCY - 5, 20, 14);
+    g.fillEllipse(cx + 18, headCY - 5, 20, 14);
+    g.fillStyle(eyeColor);
+    g.fillCircle(cx - 18, headCY - 5, 6);
+    g.fillCircle(cx + 18, headCY - 5, 6);
+    g.fillStyle(0x000000);
+    g.fillCircle(cx - 18, headCY - 5, 3);
+    g.fillCircle(cx + 18, headCY - 5, 3);
+
+    // Mouth (relaxed smile)
+    g.fillStyle(0xcc5555);
+    g.fillEllipse(cx, headCY + 15, 22, 10);
+
+    // Nose
+    const noseDark = Phaser.Display.Color.ValueToColor(skinColor).darken(15).color;
+    g.fillStyle(noseDark);
+    g.fillTriangle(cx - 5, headCY + 5, cx + 5, headCY + 5, cx, headCY + 15);
+
+    // ── Hair ──────────────────────────────────────────────────────────────────
+    // Reuse the same offsets as the standing character by converting headCY back
+    // to the feet-level baseY coordinate system that _drawHair uses.
+    this._drawHair(g, hairStyleOpt, cx, headCY + HEAD_TO_BASE_OFFSET, hairColor);
+
+    // ── Accessories ───────────────────────────────────────────────────────────
+    if (accessoryOpt === 'Hat' || accessoryOpt === 'Hat + Glasses') {
+      // Hat brim at head top (headCY − 45)
+      ag.fillStyle(0x5a3a1a);
+      ag.fillEllipse(cx, headCY - 45, 96, 18);
+      ag.fillRect(cx - 36, headCY - 87, 72, 42);
+      ag.fillStyle(0x331a00);
+      ag.fillRect(cx - 36, headCY - 53, 72, 8);
+    }
+
+    if (accessoryOpt === 'Glasses' || accessoryOpt === 'Hat + Glasses') {
+      ag.lineStyle(3, 0x333333);
+      ag.strokeCircle(cx - 18, headCY - 5, 11);
+      ag.strokeCircle(cx + 18, headCY - 5, 11);
+      ag.beginPath();
+      ag.moveTo(cx - 7,  headCY - 5);
+      ag.lineTo(cx + 7,  headCY - 5);
+      ag.strokePath();
+      ag.beginPath();
+      ag.moveTo(cx - 29, headCY - 5);
+      ag.lineTo(cx - 42, headCY - 3);
+      ag.strokePath();
+      ag.beginPath();
+      ag.moveTo(cx + 29, headCY - 5);
+      ag.lineTo(cx + 42, headCY - 3);
+      ag.strokePath();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Hair drawing – identical logic to CharacterSelectScene._drawHair so that
+  // styles match exactly.  Pass (headCY + 265) as baseY to keep offsets consistent.
+  // ---------------------------------------------------------------------------
+  _drawHair(g, style, cx, baseY, color) {
+    g.fillStyle(color);
+    switch (style) {
+      case 'Short':
+        g.fillEllipse(cx, baseY - 295, 84, 50);
+        break;
+      case 'Long':
+        g.fillEllipse(cx, baseY - 295, 84, 50);
+        g.fillRect(cx - 42, baseY - 290, 14, 90);
+        g.fillRect(cx + 28, baseY - 290, 14, 90);
+        break;
+      case 'Curly Short':
+        g.fillCircle(cx, baseY - 310, 44);
+        g.fillCircle(cx - 30, baseY - 295, 26);
+        g.fillCircle(cx + 30, baseY - 295, 26);
+        break;
+      case 'Curly Long':
+        g.fillCircle(cx, baseY - 310, 44);
+        g.fillCircle(cx - 30, baseY - 295, 26);
+        g.fillCircle(cx + 30, baseY - 295, 26);
+        g.fillCircle(cx - 44, baseY - 270, 18);
+        g.fillCircle(cx - 46, baseY - 245, 16);
+        g.fillCircle(cx - 44, baseY - 222, 15);
+        g.fillCircle(cx - 42, baseY - 200, 14);
+        g.fillCircle(cx + 44, baseY - 270, 18);
+        g.fillCircle(cx + 46, baseY - 245, 16);
+        g.fillCircle(cx + 44, baseY - 222, 15);
+        g.fillCircle(cx + 42, baseY - 200, 14);
+        break;
+      case 'Spiky':
+        for (let i = -2; i <= 2; i++) {
+          g.fillTriangle(
+            cx + i * 16 - 8, baseY - 300,
+            cx + i * 16 + 8, baseY - 300,
+            cx + i * 16,     baseY - 340
+          );
+        }
+        g.fillEllipse(cx, baseY - 295, 84, 30);
+        break;
+      default:
+        g.fillEllipse(cx, baseY - 295, 84, 50);
+    }
+  }
+}

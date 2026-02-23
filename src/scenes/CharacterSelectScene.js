@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 // Character customisation options (8 traits)
 // ---------------------------------------------------------------------------
-const TRAITS = [
+export const TRAITS = [
   {
     key: 'hairStyle',
     label: 'Hair Style',
@@ -49,35 +49,35 @@ const TRAITS = [
 // ---------------------------------------------------------------------------
 // Color maps
 // ---------------------------------------------------------------------------
-const HAIR_COLORS = {
+export const HAIR_COLORS = {
   Blonde: 0xffd700,
   Brown: 0x8b4513,
   Black: 0x1a1a1a,
   Red: 0xcc2200,
 };
 
-const SKIN_TONES = {
+export const SKIN_TONES = {
   Light: 0xffe0bd,
   Medium: 0xd4a574,
   Tan: 0xc68642,
   Dark: 0x7c4a1e,
 };
 
-const EYE_COLORS = {
+export const EYE_COLORS = {
   Blue: 0x4169e1,
   Brown: 0x6b3a2a,
   Green: 0x228b22,
   Gray: 0x808080,
 };
 
-const TOP_COLORS = {
+export const TOP_COLORS = {
   Red: 0xe03c3c,
   Blue: 0x3c6ee0,
   Green: 0x3cb84a,
   Yellow: 0xe0c03c,
 };
 
-const BOTTOM_COLORS = {
+export const BOTTOM_COLORS = {
   Jeans: 0x4a6fa5,
   Shorts: 0x8b6914,
   Skirt: 0xd4649a,
@@ -577,35 +577,6 @@ export class CharacterSelectScene extends Phaser.Scene {
   // Start button handler
   // -------------------------------------------------------------------------
   _onStartGame() {
-    // For now show a brief confirmation – future scenes can be added here
-    const W = this.scale.width;
-    const H = this.scale.height;
-
-    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.6);
-    const msg = this.add
-      .text(W / 2, H / 2, '🎉 Character Created!\nReady to play!', {
-        fontSize: '28px',
-        fontFamily: 'Arial',
-        color: '#ffffff',
-        align: 'center',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-
-    // Fade in
-    overlay.setAlpha(0);
-    msg.setAlpha(0);
-    this.tweens.add({
-      targets: [overlay, msg],
-      alpha: { from: 0, to: 1 },
-      duration: 500,
-    });
-
-    // Dismiss on click
-    overlay.setInteractive();
-    overlay.on('pointerdown', () => {
-      overlay.destroy();
-      msg.destroy();
-    });
+    this.scene.start('LivingRoomScene', { ...this._selections });
   }
 }
