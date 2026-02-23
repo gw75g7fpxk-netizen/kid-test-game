@@ -374,22 +374,22 @@ export class CharacterSelectScene extends Phaser.Scene {
     // --- Legs / bottom ---
     g.fillStyle(bottomColor);
     if (bottomOpt === 'Shorts') {
-      g.fillRect(cx - 24, baseY - 90, 22, 40);
-      g.fillRect(cx + 2, baseY - 90, 22, 40);
+      g.fillRect(cx - 24, baseY - 120, 22, 40);
+      g.fillRect(cx + 2, baseY - 120, 22, 40);
     } else if (bottomOpt === 'Skirt') {
       g.fillTriangle(
         cx - 28,
-        baseY - 90,
+        baseY - 120,
         cx + 28,
-        baseY - 90,
+        baseY - 120,
         cx - 38,
         baseY - 5
       );
       g.fillTriangle(
         cx - 28,
-        baseY - 90,
+        baseY - 120,
         cx + 28,
-        baseY - 90,
+        baseY - 120,
         cx + 38,
         baseY - 5
       );
