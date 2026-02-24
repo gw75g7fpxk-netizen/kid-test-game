@@ -30,9 +30,9 @@ export class LivingRoomScene extends Phaser.Scene {
     const bgG = this.add.graphics();
     this._drawRoom(bgG, W, H);
 
-    const charG = this.add.graphics();
-    const accG = this.add.graphics();
-    this._drawSittingCharacter(charG, accG, W, H);
+    this._charG = this.add.graphics();
+    this._accG = this.add.graphics();
+    this._drawSittingCharacter(this._charG, this._accG, W, H);
 
     // Draw couch front face on top so it partially overlaps the character's legs
     const fgG = this.add.graphics();
@@ -71,12 +71,81 @@ export class LivingRoomScene extends Phaser.Scene {
       this.scene.start('CharacterSelectScene');
     });
 
+    // Keyboard arrow keys
+    this._cursors = this.input.keyboard.createCursorKeys();
+
+    // D-pad touch state
+    this._dpadState = { up: false, down: false, left: false, right: false };
+    this._createDPad(W, H);
+
     // Fade the scene in
     this.cameras.main.setAlpha(0);
     this.tweens.add({
       targets: this.cameras.main,
       alpha: 1,
       duration: 500,
+    });
+  }
+
+  update() {
+    const speed = 3;
+    let dx = 0;
+    let dy = 0;
+
+    if (this._cursors.left.isDown  || this._dpadState.left)  dx -= speed;
+    if (this._cursors.right.isDown || this._dpadState.right) dx += speed;
+    if (this._cursors.up.isDown    || this._dpadState.up)    dy -= speed;
+    if (this._cursors.down.isDown  || this._dpadState.down)  dy += speed;
+
+    if (dx !== 0 || dy !== 0) {
+      const W = this.scale.width;
+      const H = this.scale.height;
+      const maxDX = W * 0.4;
+      const maxDY = H * 0.2;
+      this._charG.x = Phaser.Math.Clamp(this._charG.x + dx, -maxDX, maxDX);
+      this._charG.y = Phaser.Math.Clamp(this._charG.y + dy, -maxDY, maxDY);
+      this._accG.x  = this._charG.x;
+      this._accG.y  = this._charG.y;
+    }
+  }
+
+  _createDPad(W, H) {
+    const btnSize = 44;
+    const pad = 24;
+    const cx = pad + btnSize * 1.5;
+    const cy = H - pad - btnSize * 1.5;
+
+    // Semi-transparent background
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.25);
+    bg.fillCircle(cx, cy, btnSize * 1.9);
+
+    const dirs = [
+      { key: 'up',    label: '▲', ox: 0,        oy: -btnSize },
+      { key: 'down',  label: '▼', ox: 0,        oy:  btnSize },
+      { key: 'left',  label: '◀', ox: -btnSize, oy: 0 },
+      { key: 'right', label: '▶', ox:  btnSize, oy: 0 },
+    ];
+
+    dirs.forEach(({ key, label, ox, oy }) => {
+      const btn = this.add
+        .text(cx + ox, cy + oy, label, {
+          fontSize: '22px',
+          fontFamily: 'Arial',
+          color: '#ffffff',
+          backgroundColor: '#334466',
+          padding: { x: 10, y: 7 },
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true })
+        .setAlpha(0.85)
+        .setDepth(10);
+
+      btn.on('pointerdown',     () => { this._dpadState[key] = true;  btn.setAlpha(1); });
+      btn.on('pointerup',       () => { this._dpadState[key] = false; btn.setAlpha(0.85); });
+      btn.on('pointerupoutside',() => { this._dpadState[key] = false; btn.setAlpha(0.85); });
+      btn.on('pointerout',      () => { this._dpadState[key] = false; btn.setAlpha(0.85); });
+      btn.on('pointerover',     () => btn.setAlpha(1));
     });
   }
 
