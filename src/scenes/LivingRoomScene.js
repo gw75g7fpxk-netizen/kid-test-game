@@ -76,7 +76,22 @@ export class LivingRoomScene extends Phaser.Scene {
 
     // D-pad touch state
     this._dpadState = { up: false, down: false, left: false, right: false };
+    this._dpadElements = [];
     this._createDPad(W, H);
+
+    // Reposition D-pad when the viewport changes (orientation change, browser chrome).
+    // Debounced to avoid creating multiple D-pads during rapid resize events.
+    this._dpadResizeTimer = null;
+    this.scale.on('resize', (gameSize) => {
+      if (this._dpadResizeTimer) clearTimeout(this._dpadResizeTimer);
+      this._dpadResizeTimer = setTimeout(() => {
+        this._dpadElements.forEach(el => el.destroy());
+        this._dpadElements = [];
+        this._dpadState = { up: false, down: false, left: false, right: false };
+        this._createDPad(gameSize.width, gameSize.height);
+        this._dpadResizeTimer = null;
+      }, 100);
+    }, this);
 
     // Fade the scene in
     this.cameras.main.setAlpha(0);
@@ -110,15 +125,22 @@ export class LivingRoomScene extends Phaser.Scene {
   }
 
   _createDPad(W, H) {
-    const btnSize = 44;
-    const pad = 24;
-    const cx = pad + btnSize * 1.5;
-    const cy = H - pad - btnSize * 1.5;
+    const btnSize = 50;
+    const padX = 24;
+    // Use a larger bottom padding (game units = CSS px at 1:1 scale in RESIZE
+    // mode) so the D-pad stays fully visible above browser chrome on mobile
+    // devices (iOS home indicator ~34 px, Android nav bar ~56 px).
+    // 80 px gives comfortable clearance on all common devices.
+    const padY = 80;
+    const cx = padX + btnSize * 1.5;
+    const cy = H - padY - btnSize * 1.5;
 
     // Semi-transparent background
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.25);
+    bg.fillStyle(0x000000, 0.35);
     bg.fillCircle(cx, cy, btnSize * 1.9);
+    bg.setDepth(9);
+    this._dpadElements.push(bg);
 
     const dirs = [
       { key: 'up',    label: '▲', ox: 0,        oy: -btnSize },
@@ -130,11 +152,11 @@ export class LivingRoomScene extends Phaser.Scene {
     dirs.forEach(({ key, label, ox, oy }) => {
       const btn = this.add
         .text(cx + ox, cy + oy, label, {
-          fontSize: '22px',
+          fontSize: '26px',
           fontFamily: 'Arial',
           color: '#ffffff',
           backgroundColor: '#334466',
-          padding: { x: 10, y: 7 },
+          padding: { x: 12, y: 9 },
         })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
@@ -146,6 +168,8 @@ export class LivingRoomScene extends Phaser.Scene {
       btn.on('pointerupoutside',() => { this._dpadState[key] = false; btn.setAlpha(0.85); });
       btn.on('pointerout',      () => { this._dpadState[key] = false; btn.setAlpha(0.85); });
       btn.on('pointerover',     () => btn.setAlpha(1));
+
+      this._dpadElements.push(btn);
     });
   }
 
