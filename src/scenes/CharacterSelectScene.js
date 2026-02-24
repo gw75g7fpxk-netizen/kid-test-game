@@ -447,7 +447,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // --- Neck ---
     g.fillStyle(skinColor);
-    g.fillRect(cx - 10, baseY - 215, 20, 20);
+    g.fillRect(cx - 10, baseY - 220, 20, 20);
 
     // --- Head ---
     g.fillStyle(skinColor);
