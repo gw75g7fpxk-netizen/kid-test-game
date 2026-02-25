@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+/* global Phaser */
 import { CharacterSelectScene } from './scenes/CharacterSelectScene.js';
 import { LivingRoomScene } from './scenes/LivingRoomScene.js';
 
